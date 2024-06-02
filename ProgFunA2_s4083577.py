@@ -173,18 +173,18 @@ class Records:
 
     # Search for a customer by ID or name, returning the customer object if found
     def find_customer(self, identifier):
-        identifier = identifier  # Trim whitespace and convert to lowercase
+        identifier = identifier.lower().strip() # Trim whitespace and convert to lowercase
         for customer in self.customers:
-            if customer.ID == identifier or customer.name.lower() == identifier:
+            if customer.name.lower().strip() == identifier:
                 print("Hello "+ customer.name)
                 return customer
         return None
 
     # Search for a product by ID or name, returning the product object if found
     def find_product(self, identifier):
-        identifier = identifier  # Trim whitespace and convert to lowercase
+        identifier = identifier.lower().strip() # Trim whitespace and convert to lowercase
         for product in self.products:
-            if product.ID == identifier or product.name.lower() == identifier:
+            if product.name.lower().strip() == identifier:
                 print("Your product is: "+ product.name)
                 return product
         return None
@@ -246,9 +246,9 @@ class Operations:
 
     # Facilitate the purchasing process including updating rewards and printing receipts
     def make_purchase(self):
-        customer_name = input("Enter customer ID: ")
-        product_name = input("Enter product ID: ")
-        quantity = int(input("Enter quantity: "))
+        customer_name = input("Your name: ")
+        product_name = input("What would you like to buy today?: ")
+        quantity = int(input("Quantity: "))
         # customer_name = "B1"
         # product_name = "P1"
         # quantity = 1
