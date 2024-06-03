@@ -1,28 +1,3 @@
-"""
-Name: Maharab Kibria
-ID: s4083577
-Attempted Level: Pass Level. 19th May, 2024
-Limitation Notice: The current implementation of the find_customer and find_product methods supports searching by customer ID and product ID only. There is an ongoing issue with searching by customer or product names using the dictionary approach. Despite attempts to normalize data through trimming and converting to lowercase, these searches are not returning expected results. I plan to resolve this issue in next submissions.
-
-***Design Process and Coding Steps:
-I aimed to keep the SOLID principles in mind, adapting them as much as possible to a Python environment. The class structures were clearly outlined in our project specifications, which provided a solid foundation.
-Initially, I started by defining the necessary classes and sketching out the methods. I didn't write all the method implementations right away but instead commented on what each method should achieve. This preliminary setup was incredibly useful later on, as it guided me when fleshing out the details.
-After setting up the basic structures, I moved on to create the Operations class. This was crucial for achieving the "Pass Level" goals as it tied all the components together. Running the initial tests revealed some gaps since many methods were still placeholders.
-I then systematically filled in these methods, paying close attention to the project documentation to ensure that the implementation met the specific needs of VIP and basic customers, as well as the order handling process. This phase required careful attention to detail to adhere to the business logic outlined in our guidelines.
-The next step involved handling file input and output, which proved challenging. I spent quite some time getting this right, but resources like the Python I/O documentation (https://docs.python.org/3/tutorial/inputoutput.html) were incredibly helpful, offering many practical examples.
-Finally, I focused on implementing the functionality to display customer and product data effectively and enabling the process to purchase products after loading data from files. This last part brought everything together, allowing for a full demonstration of the system's capabilities.
-Throughout this process, I iterated over the code, refining and testing repeatedly, which helped in ironing out the bugs.
-
-***Code Analysis:
-Use of Class Methods and Static Variables: For the BasicCustomer and VIPCustomer classes, static variables and class methods (like set_reward_rate) are used to manage properties shared across all instances. This approach ensures that changes to reward rates affect all customers of a type globally, which is more efficient than updating each instance individually.
-Polymorphism in Customer Subclasses: Methods like get_reward and get_discount are implemented differently across subclasses to reflect the differing behaviors between basic and VIP customers, providing flexibility in how different types of customers are treated.
-Error Handling in File Operations: Robust error handling in the Records class prevents the program from crashing due to file-related errors, ensuring a graceful exit or error message is presented to the user.
-Iterative Approach in Operations Class: The loop within display_menu and recursive call to handle_choice demonstrate an iterative approach to handle user inputs continuously until the exit option is selected.
-
-***Challenges:
-One significant challenge was managing the search functionality for customer and product names, which initially failed to handle cases and whitespace effectively. This required revisiting string handling and normalization, which was a valuable lesson in the importance of rigorous testing and user input validation.
-
-"""
 # Define the base Customer class
 class Customer:
     def __init__(self, ID, name, reward):
@@ -187,7 +162,7 @@ class Records:
 
     # Search for a product by ID or name, returning the product object if found
     def find_product(self, identifier):
-        identifier = identifier.lower().strip() # Trim whitespace and convert to lowercase
+        identifier = identifier.lower().strip()
         for product in self.products:
             if product.name.lower().strip() == identifier:
                 print("Your product is: "+ product.name)
@@ -208,11 +183,77 @@ class Records:
         for product in self.products:
             print(f"ID: {product.ID}, Name: {product.name}, Price: {product.price} AUD, Prescription Requirement: {product.requires_prescription}")
 
+### Implementation of the custom exception classes in the validation class does not allow the program to wait until the user has given a correct input.
+
+# class InvalidNameError(Exception):
+#     """Exception raised for errors in the input of the name."""
+#     pass
+#
+# class InvalidProductError(Exception):
+#     """Exception raised for errors in the product input."""
+#     pass
+#
+# class InvalidQuantityError(Exception):
+#     """Exception raised for errors in the input quantity."""
+#     pass
+#
+# class InvalidPrescriptionAnswerError(Exception):
+#     """Exception raised for errors in the prescription answer."""
+#     pass
+
+class Validation:
+    def __init__(self, records):
+        self.records = records
+
+    def validate_customer_name(self):
+        while True:
+            customer_name = input("Enter your name (alphabets only): ")
+            if customer_name.isalpha():
+                return customer_name
+            else:
+                print("Invalid name. Please use alphabets only.")
+
+    def validate_product_input(self):
+        while True:
+            product_name = input("Enter the product name you wish to purchase: ")
+            product = self.records.find_product(product_name)
+            if product:
+                return product
+            else:
+                print("Product not found. Please enter a valid product name.")
+
+    def validate_quantity(self):
+        while True:
+            try:
+                quantity = int(input("Enter quantity (positive integer): "))
+                if quantity > 0:
+                    return quantity
+                else:
+                    print("Quantity must be greater than zero.")
+            except ValueError:
+                print("Invalid input. Please enter a valid integer.")
+
+    def validate_prescription(self, product):
+        if product.requires_prescription:
+            while True:
+                prescription = input("This product requires a prescription. Do you have one? (y/n): ")
+                if prescription.lower() in ['y', 'n']:
+                    if prescription.lower() == 'y':
+                        return True
+                    else:
+                        print("You cannot purchase this product without a prescription.")
+                        return False
+                else:
+                    print("Invalid response. Please enter 'y' for yes or 'n' for no.")
+        return True
+
+
 
 # Operations Class to handle user interactions and operational logic
 class Operations:
     def __init__(self, customer_file, product_file):
-        self.records = Records() # Instantiate the Records class to manage data
+        self.records = Records()  # Load the records handling class
+        self.validation = Validation(self.records)  # Initialize validation class
         self.load_data(customer_file, product_file)
 
     # Load customer and product data from specified files
@@ -251,25 +292,18 @@ class Operations:
 
     # Facilitate the purchasing process including updating rewards and printing receipts
     def make_purchase(self):
-        customer_name = input("Your name: ")
-        product_name = input("What would you like to buy today?: ")
-        quantity = int(input("Quantity: "))
-        # customer_name = "B1"
-        # product_name = "P1"
-        # quantity = 1
+        customer_name = self.validation.validate_customer_name()
+        product = self.validation.validate_product_input()
+        if product.requires_prescription and not self.validation.validate_prescription(product):
+            return
+        quantity = self.validation.validate_quantity()
 
         customer = self.records.find_customer(customer_name)
-        product = self.records.find_product(product_name)
+        product = self.records.find_product(product.name)
 
         if customer is None or product is None:
-            print("Customer or product not found. Please try again.")
+            print("Your customer or Product details can not be found. Please try again.")
             return
-
-        if product.requires_prescription:
-            prescription = input("This product requires a prescription. Do you have one? (yes/no): ")
-            if prescription.lower() != 'yes':
-                print("You need a prescription to purchase this product.")
-                return
 
         order = Order(customer, product, quantity)
         original_cost, discount, total_cost, reward = order.compute_cost()
