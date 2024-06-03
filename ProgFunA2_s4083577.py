@@ -103,14 +103,16 @@ class VIPCustomer(Customer):
 
 # Product class to manage product attributes
 class Product:
-    def __init__(self, ID, name, price):
+    def __init__(self, ID, name, price, requires_prescription):
         self.ID = ID
         self.name = name
         self.price = price
+        self.requires_prescription = requires_prescription == 'y'  # 'y' means prescription required
 
-    # Display product information
     def display_info(self):
-        print(f"ID: {self.ID}, Name: {self.name}, Price: {self.price} AUD")
+        prescription_status = "requires prescription" if self.requires_prescription else "no prescription required"
+        print(f"ID: {self.ID}, Name: {self.name}, Price: {self.price} AUD, Prescription: {prescription_status}")
+
 
 # Order class to handle transactions
 class Order:
@@ -164,12 +166,13 @@ class Records:
             with open(filename, 'r') as file:
                 for line in file:
                     parts = line.strip().split(',')
-                    product = Product(parts[0], parts[1], float(parts[2]))
-                    self.products.append(product)
+                    if len(parts) == 4:  # Check if the product line has the correct format
+                        product_id, product_name, price, prescription_required = parts
+                        self.products.append(Product(product_id, product_name, float(price), prescription_required))
         except FileNotFoundError:
             print(f"Error: The file {filename} does not exist.")
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"An error occurred while reading product data: {e}")
 
     # Search for a customer by ID or name, returning the customer object if found
     def find_customer(self, identifier):
