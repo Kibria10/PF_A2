@@ -107,7 +107,7 @@ class Product:
         self.ID = ID
         self.name = name
         self.price = price
-        self.requires_prescription = requires_prescription == 'y'  # 'y' means prescription required
+        self.requires_prescription = True if requires_prescription == 'y' else False
 
     def display_info(self):
         prescription_status = "requires prescription" if self.requires_prescription else "no prescription required"
@@ -166,9 +166,11 @@ class Records:
             with open(filename, 'r') as file:
                 for line in file:
                     parts = line.strip().split(',')
-                    if len(parts) == 4:  # Check if the product line has the correct format
-                        product_id, product_name, price, prescription_required = parts
-                        self.products.append(Product(product_id, product_name, float(price), prescription_required))
+                    product_id = parts[0].strip()
+                    product_name = parts[1].strip()
+                    price = float(parts[2].strip())
+                    requires_prescription = parts[3].strip()
+                    self.products.append(Product(product_id, product_name, price, requires_prescription))
         except FileNotFoundError:
             print(f"Error: The file {filename} does not exist.")
         except Exception as e:
@@ -204,7 +206,7 @@ class Records:
     # List all products, showing detailed information about each
     def list_products(self):
         for product in self.products:
-            print(f"ID: {product.ID}, Name: {product.name}, Price: {product.price} AUD")
+            print(f"ID: {product.ID}, Name: {product.name}, Price: {product.price} AUD, Prescription Requirement: {product.requires_prescription}")
 
 
 # Operations Class to handle user interactions and operational logic
@@ -262,6 +264,12 @@ class Operations:
         if customer is None or product is None:
             print("Customer or product not found. Please try again.")
             return
+
+        if product.requires_prescription:
+            prescription = input("This product requires a prescription. Do you have one? (yes/no): ")
+            if prescription.lower() != 'yes':
+                print("You need a prescription to purchase this product.")
+                return
 
         order = Order(customer, product, quantity)
         original_cost, discount, total_cost, reward = order.compute_cost()
