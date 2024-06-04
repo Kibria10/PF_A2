@@ -223,6 +223,13 @@ class Records:
         for bundle in self.bundles:
                 print( f"Bundle ID: {bundle.ID}, Name: {bundle.name}, Price: {self.compute_bundle_price(bundle.products)} AUD, Products:{bundle.products}, Prescription Required: {self.bundle_prescription_requirement(bundle.products)}")
 
+    def find_bundle(self, identifier):
+        identifier = identifier.lower().strip()
+        for bundle in self.bundles:
+            if bundle.name.lower().strip() == identifier:
+                print("Your Bundle is: " + bundle.name)
+                return bundle
+        return None
 
 ### Implementation of the custom exception classes in the validation class does not allow the program to wait until the user has given a correct input.
 
@@ -256,12 +263,14 @@ class Validation:
 
     def validate_product_input(self):
         while True:
-            product_name = input("Enter the product name you wish to purchase: ")
+            product_name = input("Enter the product/bundle name or ID you wish to purchase: ")
             product = self.records.find_product(product_name)
             if product:
-                return product
-            else:
-                print("Product not found. Please enter a valid product name.")
+                return ('product', product)
+            bundle = self.records.find_bundle(product_name)
+            if bundle:
+                return ('bundle', bundle)
+            print("Product not found. Please enter a valid product name.")
 
     def validate_quantity(self):
         while True:
@@ -293,8 +302,8 @@ class Bundle:
         self.ID = ID
         self.name = name
         self.products = products  # List of products in the bundle
-        self.total_price = total_price
-        self.prescription_requirement = prescription_requirement
+        self.price = total_price
+        self.requires_prescription = prescription_requirement
 
 
 # Operations Class to handle user interactions and operational logic
@@ -341,49 +350,60 @@ class Operations:
     # Facilitate the purchasing process including updating rewards and printing receipts
     def make_purchase(self):
         customer_name = self.validation.validate_customer_name()
-        product = self.validation.validate_product_input()
-        if product.requires_prescription and not self.validation.validate_prescription(product):
-            return
-        quantity = self.validation.validate_quantity()
+        item_type, item = self.validation.validate_product_input()
 
-        customer = self.records.find_customer(customer_name)
-        product = self.records.find_product(product.name)
+        if item_type == 'bundle':
+            if item.requires_prescription and not self.validation.validate_prescription(item):
+                return
+            quantity = self.validation.validate_quantity()
 
-        if customer is None or product is None:
-            print("Your customer or Product details can not be found. Please try again.")
-            return
+            customer = self.records.find_customer(customer_name)
 
-        order = Order(customer, product, quantity)
-        original_cost, discount, total_cost, reward = order.compute_cost()
+            if customer is None:
+                print("Customer not found. Please try again.")
+                return
 
-        # Update customer reward
-        customer.update_reward(reward)
-
-        # Print the receipt based on customer type
-        if isinstance(customer, VIPCustomer):
-            print("---------------------------------------------------------")
-            print("Receipt")
-            print("---------------------------------------------------------")
-            print(f"Name: {customer.name}")
-            print(f"Product: {product.name}")
-            print(f"Unit Price: {product.price} (AUD)")
-            print(f"Quantity: {quantity}")
-            print("---------------------------------------------------------")
-            print(f"Original cost: {original_cost} (AUD)")
-            print(f"Discount: {discount} (AUD)")
-            print(f"Total cost: {total_cost} (AUD)")
-            print(f"Earned reward: {reward}")
+            bundle = item
+            original_cost = float(bundle.price) * quantity
+            discount = 0 if not isinstance(customer, VIPCustomer) else customer.get_discount(original_cost)
+            total_cost = original_cost - discount
+            reward = customer.get_reward(total_cost)
+            customer.update_reward(reward)
         else:
-            print("---------------------------------------------------------")
-            print("Receipt")
-            print("---------------------------------------------------------")
-            print(f"Name: {customer.name}")
+            product = item
+            if product.requires_prescription and not self.validation.validate_prescription(product):
+                return
+            quantity = self.validation.validate_quantity()
+
+            customer = self.records.find_customer(customer_name)
+            product = self.records.find_product(product.name)
+
+            if customer is None or product is None:
+                print("Your customer or product details cannot be found. Please try again.")
+                return
+
+            order = Order(customer, product, quantity)
+            original_cost, discount, total_cost, reward = order.compute_cost()
+            customer.update_reward(reward)
+
+        # Print the receipt based on customer type and item type
+        print("---------------------------------------------------------")
+        print("Receipt")
+        print("---------------------------------------------------------")
+        print(f"Name: {customer.name}")
+        if item_type == 'bundle':
+            print(f"Bundle: {bundle.name}")
+            print(f"Included Products: {', '.join([pid for pid in bundle.products])}")
+        else:
             print(f"Product: {product.name}")
             print(f"Unit Price: {product.price} (AUD)")
             print(f"Quantity: {quantity}")
-            print("---------------------------------------------------------")
-            print(f"Total cost: {total_cost} (AUD)")
-            print(f"Earned reward: {reward}")
+        print("---------------------------------------------------------")
+        if isinstance(customer, VIPCustomer):
+            print(f"Original cost: {original_cost} AUD")
+            print(f"Discount: {discount} AUD")
+        print(f"Total cost: {total_cost} AUD")
+        print(f"Earned reward: {reward}")
 
     def run(self):
         self.display_menu()
