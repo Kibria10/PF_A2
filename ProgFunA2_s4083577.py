@@ -233,6 +233,16 @@ class Records:
                 return bundle
         return None
 
+    def add_update_product(self, product_id, name, price, requires_prescription):
+        existing_product = self.find_product_by_id(product_id)
+        if existing_product:
+            existing_product.name = name
+            existing_product.price = price
+            existing_product.requires_prescription = requires_prescription == 'y'
+        else:
+            self.products.append(Product(product_id, name, price, requires_prescription))
+        print("Product information updated successfully.")
+
 class Validation:
     def __init__(self, records):
         self.records = records
@@ -317,7 +327,8 @@ class Operations:
         print("1. Make a purchase")
         print("2. Display existing customers")
         print("3. Display existing products")
-        print("4. Exit")
+        print("4. Add/update product information")
+        print("5. Exit")
         choice = input("Enter your choice: ")
         self.handle_choice(choice)
 
@@ -329,11 +340,26 @@ class Operations:
         elif choice == '3':
             self.records.list_products()
         elif choice == '4':
+            self.add_update_product_info()
+        elif choice == '5':
             print("Exiting program...")
             exit()
         else:
             print("Invalid choice. Please try again.")
         self.display_menu()  # Redisplay menu after handling choice
+
+    def add_update_product_info(self):
+        product_id = input("Enter the product ID: ")
+        name = input("Enter the product name: ")
+        price = input("Enter the product price (AUD): ")
+        requires_prescription = input("Does the product require a prescription? (y/n): ")
+
+        try:
+            price = float(price)  # Ensure the price is a valid float
+            self.records.add_update_product(product_id, name, price, requires_prescription)
+        except ValueError:
+            print("Invalid input for price. Please enter a valid number.")
+
 
     # Facilitate the purchasing process including updating rewards and printing receipts
     def make_purchase(self):
