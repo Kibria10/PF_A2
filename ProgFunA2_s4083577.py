@@ -166,14 +166,14 @@ class Records:
 
     # Search for a customer by ID or name, returning the customer object if found
     def find_customer(self, identifier):
-        identifier = identifier.lower().strip()  # Trim whitespace and convert to lowercase
+        identifier = identifier.lower().strip().lstrip()  # Trim whitespace and convert to lowercase
         for customer in self.customers:
-            if customer.name.lower().strip() == identifier:
+            if customer.name.lower().strip().lstrip() == identifier or customer.ID.lower().strip().lstrip() == identifier:
                 print("Hello " + customer.name)
                 return customer
         return None
 
-    def find_product_by_id(self, product_id):
+    def find_product_by_id(self, product_id): ##TO DO Merge this method with the other one
         # Search in single products
         for product in self.products:
             if product.ID == product_id.strip().lstrip():
@@ -182,11 +182,13 @@ class Records:
 
     # Search for a product by ID or name, returning the product object if found
     def find_product(self, identifier):
-        identifier = identifier.lower().strip()
+        identifier = identifier.lower().strip().lstrip()
         for product in self.products:
-            if product.name.lower().strip() == identifier:
-                print("Your product is: " + product.name)
+            if product.ID.lower().strip().lstrip() == identifier or product.name.lower().strip().lstrip() == identifier:
                 return product
+        for bundle in self.bundles:
+            if bundle.ID.lower().strip().lstrip() == identifier or bundle.name.lower().strip().lstrip() == identifier:
+                return bundle
         return None
 
     # List all customers, showing detailed information about each
@@ -255,21 +257,25 @@ class Validation:
 
     def validate_customer_name(self):
         while True:
-            customer_name = input("Enter your name (alphabets only): ")
-            if customer_name.isalpha():
-                return customer_name
+            customer_input = input("Enter your name or ID: ")
+            # Check if the input contains only alphabets for name or alphanumeric for IDs
+            if customer_input.isalpha():
+                return customer_input
+            elif customer_input.isalnum() and not customer_input.isalpha():
+                return customer_input
             else:
-                print("Invalid name. Please use alphabets only.")
+                print("Invalid input. Please use alphabets only for names or alphanumeric characters for IDs.")
 
     def validate_product_input(self):
         while True:
-            product_name = input("Enter the product/bundle name or ID you wish to purchase: ")
-            product = self.records.find_product(product_name)
-            if product:
-                return ('product', product)
-            bundle = self.records.find_bundle(product_name)
-            if bundle:
-                return ('bundle', bundle)
+            item_name = input("Enter the product/bundle name or ID you wish to purchase: ")
+            item = self.records.find_product(item_name)
+            if item:
+                # Check if the item is a bundle by looking for the 'products' attribute
+                if hasattr(item, 'products'):
+                    return ('bundle', item)
+                else:
+                    return ('product', item)
             print("Product not found. Please enter a valid product name.")
 
     def validate_quantity(self):
@@ -356,7 +362,6 @@ class Operations:
             if item.requires_prescription and not self.validation.validate_prescription(item):
                 return
             quantity = self.validation.validate_quantity()
-
             customer = self.records.find_customer(customer_name)
 
             if customer is None:
@@ -374,7 +379,6 @@ class Operations:
             if product.requires_prescription and not self.validation.validate_prescription(product):
                 return
             quantity = self.validation.validate_quantity()
-
             customer = self.records.find_customer(customer_name)
             product = self.records.find_product(product.name)
 
