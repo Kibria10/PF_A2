@@ -55,11 +55,11 @@ class VIPCustomer(Customer):
 
     # Calculate discount based on the total cost
     def get_discount(self, total_cost):
-        return total_cost * (self.discount_rate / 100)
+        return total_cost * (self.discount_rate)
 
     # Calculate reward, considering the discount applied
     def get_reward(self, total_cost):
-        return round((total_cost - self.get_discount(total_cost)) * (VIPCustomer.reward_rate / 100))
+        return round((total_cost - self.get_discount(total_cost)) * VIPCustomer.reward_rate/100)
 
     # Update the customer's reward points
     def update_reward(self, value):
@@ -173,7 +173,7 @@ class Records:
                 return customer
         return None
 
-    def find_product_by_id(self, product_id): ##TO DO Merge this method with the other one
+    def find_product_by_id(self, product_id): ##TO DO: Merge this method with the other one
         # Search in single products
         for product in self.products:
             if product.ID == product_id.strip().lstrip():
@@ -232,24 +232,6 @@ class Records:
                 print("Your Bundle is: " + bundle.name)
                 return bundle
         return None
-
-### Implementation of the custom exception classes in the validation class does not allow the program to wait until the user has given a correct input.
-
-# class InvalidNameError(Exception):
-#     """Exception raised for errors in the input of the name."""
-#     pass
-#
-# class InvalidProductError(Exception):
-#     """Exception raised for errors in the product input."""
-#     pass
-#
-# class InvalidQuantityError(Exception):
-#     """Exception raised for errors in the input quantity."""
-#     pass
-#
-# class InvalidPrescriptionAnswerError(Exception):
-#     """Exception raised for errors in the prescription answer."""
-#     pass
 
 class Validation:
     def __init__(self, records):
@@ -357,50 +339,56 @@ class Operations:
     def make_purchase(self):
         customer_name = self.validation.validate_customer_name()
         item_type, item = self.validation.validate_product_input()
+        quantity = self.validation.validate_quantity()
+
+        customer = self.records.find_customer(customer_name)
+        if customer is None:
+            print("Customer not found. Please try again.")
+            return
+
+        if item.requires_prescription and not self.validation.validate_prescription(item):
+            return
 
         if item_type == 'bundle':
-            if item.requires_prescription and not self.validation.validate_prescription(item):
-                return
-            quantity = self.validation.validate_quantity()
-            customer = self.records.find_customer(customer_name)
-
-            if customer is None:
-                print("Customer not found. Please try again.")
-                return
-
-            bundle = item
-            original_cost = float(bundle.price) * quantity
-            discount = 0 if not isinstance(customer, VIPCustomer) else customer.get_discount(original_cost)
-            total_cost = original_cost - discount
-            reward = customer.get_reward(total_cost)
-            customer.update_reward(reward)
+            self.handle_bundle_purchase(item, quantity, customer)
         else:
-            product = item
-            if product.requires_prescription and not self.validation.validate_prescription(product):
-                return
-            quantity = self.validation.validate_quantity()
-            customer = self.records.find_customer(customer_name)
-            product = self.records.find_product(product.name)
+            self.handle_product_purchase(item, quantity, customer)
 
-            if customer is None or product is None:
-                print("Your customer or product details cannot be found. Please try again.")
-                return
+    def handle_bundle_purchase(self, bundle, quantity, customer):
+        original_cost = float(bundle.price) * quantity
+        discount = self.calculate_discount(customer, original_cost)
+        total_cost = original_cost - discount
+        reward = customer.get_reward(total_cost)
+        customer.update_reward(reward)
+        self.print_receipt(customer, 'bundle', bundle, quantity, original_cost, discount, total_cost, reward)
 
-            order = Order(customer, product, quantity)
-            original_cost, discount, total_cost, reward = order.compute_cost()
-            customer.update_reward(reward)
+    def handle_product_purchase(self, product, quantity, customer):
+        product = self.records.find_product(product.name)
+        if product is None:
+            print("Product details cannot be found. Please try again.")
+            return
 
-        # Print the receipt based on customer type and item type
+        order = Order(customer, product, quantity)
+        original_cost, discount, total_cost, reward = order.compute_cost()
+        customer.update_reward(reward)
+        self.print_receipt(customer, 'product', product, quantity, original_cost, discount, total_cost, reward)
+
+    def calculate_discount(self, customer, cost):
+        if isinstance(customer, VIPCustomer):
+            return customer.get_discount(cost)
+        return 0
+
+    def print_receipt(self, customer, item_type, item, quantity, original_cost, discount, total_cost, reward):
         print("---------------------------------------------------------")
         print("Receipt")
         print("---------------------------------------------------------")
         print(f"Name: {customer.name}")
         if item_type == 'bundle':
-            print(f"Bundle: {bundle.name}")
-            print(f"Included Products: {', '.join([pid for pid in bundle.products])}")
+            print(f"Bundle: {item.name}")
+            print(f"Included Products: {', '.join([pid for pid in item.products])}")
         else:
-            print(f"Product: {product.name}")
-            print(f"Unit Price: {product.price} (AUD)")
+            print(f"Product: {item.name}")
+            print(f"Unit Price: {item.price} (AUD)")
             print(f"Quantity: {quantity}")
         print("---------------------------------------------------------")
         if isinstance(customer, VIPCustomer):

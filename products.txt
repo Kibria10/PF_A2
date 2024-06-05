@@ -1,4 +1,4 @@
-P1, vitaminC, 12.0, n
+P1, vitaminC, 30.0, n
 P2, vitaminE, 14.5, n
 P3, vitaminD, 15.2, n
 P4, coldTablet, 6.4, n
