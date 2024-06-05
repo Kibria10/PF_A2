@@ -1,3 +1,67 @@
+"""
+Name: Maharab Kibria
+ID: s4083577
+Attempted Level: HD Level. 28th May, 2024
+
+VCS: Git (Github: https://github.com/Kibria10/PF_A2/tree/pass_level) // My work with commits are recorded and I have created 4 branches with the level names for each stage of the assignment.
+//I will make this repository public after submission. 
+
+Limitations:
+The program has filled up all the requirements till credit level.
+In DI_Level it has not filled up requirement i > allowing multiple products and quantities in one order
+In HD_Level it has not filled up requirement vi > while terminating, files will be updated.
+Aside of this, as far as I have tested this program with different scenarios in different levels, it has met the requirements and followed the business logics.
+
+***Design Process and Coding Steps:
+I aimed to keep the SOLID principles in mind, adapting them as much as possible to a Python environment. The class structures were clearly outlined in our project specifications, which provided a solid foundation.
+Initially, I started by defining the necessary classes and sketching out the methods. I didn't write all the method implementations right away but instead commented on what each method should achieve. This preliminary setup was incredibly useful later on, as it guided me when fleshing out the details.
+After setting up the basic structures, I moved on to create the Operations class. This was crucial for achieving the "Pass Level" goals as it tied all the components together. Running the initial tests revealed some gaps since many methods were still placeholders.
+I then systematically filled in these methods, paying close attention to the project documentation to ensure that the implementation met the specific needs of VIP and basic customers, as well as the order handling process. This phase required careful attention to detail to adhere to the business logic outlined in our guidelines.
+The next step involved handling file input and output, which proved challenging. I spent quite some time getting this right, but resources like the Python I/O documentation (https://docs.python.org/3/tutorial/inputoutput.html) were incredibly helpful, offering many practical examples.
+Finally, I focused on implementing the functionality to display customer and product data effectively and enabling the process to purchase products after loading data from files. This last part brought everything together, allowing for a full demonstration of the system's capabilities.
+Throughout this process, I iterated over the code, refining and testing repeatedly, which helped in ironing out the bugs.
+
+***Code Analysis:
+Use of Class Methods and Static Variables: For the BasicCustomer and VIPCustomer classes, static variables and class methods (like set_reward_rate) are used to manage properties shared across all instances. This approach ensures that changes to reward rates affect all customers of a type globally, which is more efficient than updating each instance individually.
+Polymorphism in Customer Subclasses: Methods like get_reward and get_discount are implemented differently across subclasses to reflect the differing behaviors between basic and VIP customers, providing flexibility in how different types of customers are treated.
+Error Handling in File Operations: Robust error handling in the Records class prevents the program from crashing due to file-related errors, ensuring a graceful exit or error message is presented to the user.
+Iterative Approach in Operations Class: The loop within display_menu and recursive call to handle_choice demonstrate an iterative approach to handle user inputs continuously until the exit option is selected.
+
+***Challenges:
+1. Coding in a single file. As the assignment requirement, it has been difficult to write multiple classes into a single file and follow up.
+2. Increase of methods. As the levels were increasing, I had to create few similar methods that may not have been ideal.
+3. Implementation of Encapsulation has been challenging with the increase of levels.
+
+"""
+
+
+import sys
+
+def main():
+    # Default file names
+    customer_file = 'customers.txt'
+    product_file = 'products.txt'
+    order_file = 'orders.txt'  # Default file name for orders
+
+    # Check the number of command line arguments
+    argc = len(sys.argv)
+    if argc == 4:
+        # Command line provides all three filenames
+        customer_file, product_file, order_file = sys.argv[1], sys.argv[2], sys.argv[3]
+    elif argc == 3:
+        # Only customer and product files provided
+        customer_file, product_file = sys.argv[1], sys.argv[2]
+    elif argc == 1:
+        # No arguments provided, use default files
+        print("Using default file names.")
+    else:
+        # Incorrect number of arguments provided
+        print("Usage: python script.py [customer_file] [product_file] [order_file]")
+        sys.exit(1)
+    # Initialize and run the operations
+    operations = Operations(customer_file, product_file, order_file)
+    operations.run()
+
 # Define the base Customer class
 class Customer:
     def __init__(self, ID, name, reward):
@@ -100,6 +164,21 @@ class Order:
         self.product = product
         self.quantity = quantity
 
+#HD Level// Redefining a new OrderHistory class to keep the business logics seperate and handling the functions in ease
+class OrderHistory:
+    def __init__(self, customer, products, total_cost, earned_rewards, date):
+        self.customer = customer
+        self.products = products  # List of tuples (product, quantity)
+        self.total_cost = total_cost
+        self.earned_rewards = earned_rewards
+        self.date = date
+
+    def display(self):
+        print(
+            f"Date: {self.date}, Customer: {self.customer.name}, Total Cost: {self.total_cost}, Earned Rewards: {self.earned_rewards}")
+        for product, quantity in self.products:
+            print(f"    Product: {product.name}, Quantity: {quantity}")
+
     # Compute the cost of the order, considering discounts and calculating rewards
     def compute_cost(self):
         original_cost = self.product.price * self.quantity  # Calculate the original cost without discount
@@ -119,6 +198,7 @@ class Records:
         self.customers = []
         self.products = []
         self.bundles = []
+        self.orders = []
 
 
     # Read customer data from a file and populate the customers list
@@ -164,12 +244,30 @@ class Records:
         except Exception as e:
             print(f"An error occurred while reading product data: {e}")
 
+    def read_orders(self, filename):
+        try:
+            with open(filename, 'r') as file:
+                for line in file:
+                    parts = line.strip().split(',')
+                    customer = self.find_customer(parts[0])
+                    products = [(self.find_product(parts[i]), int(parts[i + 1])) for i in range(1, len(parts) - 3, 2)]
+                    total_cost = float(parts[-3])
+                    earned_rewards = int(parts[-2])
+                    date = parts[-1]
+                    if customer and products:
+                        self.orders.append(OrderHistory(customer, products, total_cost, earned_rewards, date))
+                    else:
+                        print("Error: Customer or products not found in file.")
+        except FileNotFoundError:
+            print("Cannot load the order file")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
     # Search for a customer by ID or name, returning the customer object if found
     def find_customer(self, identifier):
         identifier = identifier.lower().strip().lstrip()  # Trim whitespace and convert to lowercase
         for customer in self.customers:
             if customer.name.lower().strip().lstrip() == identifier or customer.ID.lower().strip().lstrip() == identifier:
-                print("Hello " + customer.name)
                 return customer
         return None
 
@@ -306,17 +404,19 @@ class Bundle:
 
 # Operations Class to handle user interactions and operational logic
 class Operations:
-    def __init__(self, customer_file, product_file):
+    def __init__(self, customer_file, product_file, order_file=None):
         self.records = Records()  # Load the records handling class
         self.validation = Validation(self.records)  # Initialize validation class
-        self.load_data(customer_file, product_file)
+        self.load_data(customer_file, product_file, order_file)
 
     # Load customer and product data from specified files
-    def load_data(self, customer_file, product_file):
+    def load_data(self, customer_file, product_file, order_file):
         # Attempt to load customer and product data from files
         try:
             self.records.read_customers(customer_file)
             self.records.read_products(product_file)
+            if order_file:  # Load orders only if the filename is provided
+                self.records.read_orders(order_file)
         except Exception as e:
             print(f"Failed to load data: {e}")
             exit()
@@ -330,7 +430,9 @@ class Operations:
         print("4. Add/update product information")
         print("5. Adjust reward rate for Basic Customers")
         print("6. Adjust discount rate for VIP Customers")
-        print("5. Exit")
+        print("7. Display all orders")
+        print("8. Display a customer order history")
+        print("9. Exit")
         choice = input("Enter your choice: ")
         self.handle_choice(choice)
 
@@ -348,6 +450,10 @@ class Operations:
         elif choice == '6':
             self.adjust_vip_customer_discount_rate()
         elif choice == '7':
+            self.display_all_orders()
+        elif choice == '8':
+            self.display_customer_order_history()
+        elif choice == '9':
             print("Exiting program...")
             exit()
         else:
@@ -438,6 +544,33 @@ class Operations:
             return customer.get_discount(cost)
         return 0
 
+    def display_all_orders(self):
+        if not self.records.orders:
+            print("No historical orders to display.")
+            return
+        for order in self.records.orders:
+            order.display()
+
+    def display_customer_order_history(self):
+        customer_name = input("Enter the customer's name to display their order history: ")
+        customer = self.records.find_customer(customer_name)
+        print(f"{customer.ID}")
+        if not customer:
+            print(f"No customer found with the name: {customer_name}")
+            return
+
+        # Filter orders for the specified customer
+        customer_orders = [order for order in self.records.orders if order.customer.name == customer_name]
+        if not customer_orders:
+            print("No orders found for this customer.")
+            return
+
+        print(f"Order History of {customer_name}:")
+        print(f"{'Order #':<10}{'Products':<30}{'Total Cost':<15}{'Earned Rewards':<15}")
+        for i, order in enumerate(customer_orders, 1):
+            product_details = ', '.join([f"{qty} x {prod.name}" for prod, qty in order.products])
+            print(f"{i:<10}{product_details:<30}${order.total_cost:<14.2f}{order.earned_rewards:<15}")
+
     def print_receipt(self, customer, item_type, item, quantity, original_cost, discount, total_cost, reward):
         print("---------------------------------------------------------")
         print("Receipt")
@@ -462,7 +595,6 @@ class Operations:
 
 
 if __name__ == '__main__':
-    operations = Operations('./customers.txt', './products.txt')
-    operations.run()
+    main()
 
 """Developed in PyCharm Community Edition"""
