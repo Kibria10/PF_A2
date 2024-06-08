@@ -1,28 +1,3 @@
-"""
-Name: Maharab Kibria
-ID: s4083577
-Attempted Level: Pass Level. 19th May, 2024
-Limitation Notice: The current implementation of the find_customer and find_product methods supports searching by customer ID and product ID only. There is an ongoing issue with searching by customer or product names using the dictionary approach. Despite attempts to normalize data through trimming and converting to lowercase, these searches are not returning expected results. I plan to resolve this issue in next submissions.
-
-***Design Process and Coding Steps:
-I aimed to keep the SOLID principles in mind, adapting them as much as possible to a Python environment. The class structures were clearly outlined in our project specifications, which provided a solid foundation.
-Initially, I started by defining the necessary classes and sketching out the methods. I didn't write all the method implementations right away but instead commented on what each method should achieve. This preliminary setup was incredibly useful later on, as it guided me when fleshing out the details.
-After setting up the basic structures, I moved on to create the Operations class. This was crucial for achieving the "Pass Level" goals as it tied all the components together. Running the initial tests revealed some gaps since many methods were still placeholders.
-I then systematically filled in these methods, paying close attention to the project documentation to ensure that the implementation met the specific needs of VIP and basic customers, as well as the order handling process. This phase required careful attention to detail to adhere to the business logic outlined in our guidelines.
-The next step involved handling file input and output, which proved challenging. I spent quite some time getting this right, but resources like the Python I/O documentation (https://docs.python.org/3/tutorial/inputoutput.html) were incredibly helpful, offering many practical examples.
-Finally, I focused on implementing the functionality to display customer and product data effectively and enabling the process to purchase products after loading data from files. This last part brought everything together, allowing for a full demonstration of the system's capabilities.
-Throughout this process, I iterated over the code, refining and testing repeatedly, which helped in ironing out the bugs.
-
-***Code Analysis:
-Use of Class Methods and Static Variables: For the BasicCustomer and VIPCustomer classes, static variables and class methods (like set_reward_rate) are used to manage properties shared across all instances. This approach ensures that changes to reward rates affect all customers of a type globally, which is more efficient than updating each instance individually.
-Polymorphism in Customer Subclasses: Methods like get_reward and get_discount are implemented differently across subclasses to reflect the differing behaviors between basic and VIP customers, providing flexibility in how different types of customers are treated.
-Error Handling in File Operations: Robust error handling in the Records class prevents the program from crashing due to file-related errors, ensuring a graceful exit or error message is presented to the user.
-Iterative Approach in Operations Class: The loop within display_menu and recursive call to handle_choice demonstrate an iterative approach to handle user inputs continuously until the exit option is selected.
-
-***Challenges:
-One significant challenge was managing the search functionality for customer and product names, which initially failed to handle cases and whitespace effectively. This required revisiting string handling and normalization, which was a valuable lesson in the importance of rigorous testing and user input validation.
-
-"""
 # Define the base Customer class
 class Customer:
     def __init__(self, ID, name, reward):
@@ -33,15 +8,16 @@ class Customer:
     # Placeholder methods for subclasses to implement specific behavior
     def get_reward(self):
         pass
-    
+
     def get_discount(self):
         pass
-    
+
     def update_reward(self, amount):
         pass
-    
+
     def display_info(self):
         pass
+
 
 # Define the BasicCustomer class inheriting from Customer
 class BasicCustomer(Customer):
@@ -57,38 +33,42 @@ class BasicCustomer(Customer):
     # Update the reward points by a given value
     def update_reward(self, value):
         self.reward += value
-    
+
     # Display information specific to basic customers
     def display_info(self):
-        print(f"ID: {self.ID}, Name: {self.name}, Reward Points: {self.reward}, Reward Rate: {BasicCustomer.reward_rate}%")
+        print(
+            f"ID: {self.ID}, Name: {self.name}, Reward Points: {self.reward}, Reward Rate: {BasicCustomer.reward_rate}%")
 
     # Class method to change the reward rate for all basic customers
     @classmethod
     def set_reward_rate(cls, new_rate):
         cls.reward_rate = new_rate
 
+
 # Subclass for VIP customers with both reward and discount rates
 class VIPCustomer(Customer):
     reward_rate = 100  # static variable shared by all VIPCustomer instances
+
     def __init__(self, ID, name, reward, discount_rate=8):
         super().__init__(ID, name, reward)
-        self.discount_rate = discount_rate # Unique discount rate for VIP customers
+        self.discount_rate = discount_rate  # Unique discount rate for VIP customers
 
     # Calculate discount based on the total cost
     def get_discount(self, total_cost):
-        return total_cost * (self.discount_rate / 100)
+        return total_cost * (self.discount_rate)
 
     # Calculate reward, considering the discount applied
     def get_reward(self, total_cost):
-        return round((total_cost - self.get_discount(total_cost)) * (VIPCustomer.reward_rate / 100))
-    
+        return round((total_cost - self.get_discount(total_cost)) * VIPCustomer.reward_rate/100)
+
     # Update the customer's reward points
     def update_reward(self, value):
         self.reward += value
 
     # Display information specific to VIP customers
     def display_info(self):
-        print(f"ID: {self.ID}, Name: {self.name}, Reward Points: {self.reward}, Reward Rate: {VIPCustomer.reward_rate}%, Discount Rate: {self.discount_rate}%")
+        print(
+            f"ID: {self.ID}, Name: {self.name}, Reward Points: {self.reward}, Reward Rate: {VIPCustomer.reward_rate}%, Discount Rate: {self.discount_rate}%")
 
     # Class method to change the reward rate for all VIP customers
     @classmethod
@@ -100,17 +80,18 @@ class VIPCustomer(Customer):
         self.discount_rate = new_discount_rate
 
 
-
 # Product class to manage product attributes
 class Product:
-    def __init__(self, ID, name, price):
+    def __init__(self, ID, name, price, requires_prescription):
         self.ID = ID
         self.name = name
         self.price = price
+        self.requires_prescription = True if requires_prescription == 'y' else False
 
-    # Display product information
     def display_info(self):
-        print(f"ID: {self.ID}, Name: {self.name}, Price: {self.price} AUD")
+        prescription_status = "requires prescription" if self.requires_prescription else "no prescription required"
+        print(f"ID: {self.ID}, Name: {self.name}, Price: {self.price} AUD, Prescription: {prescription_status}")
+
 
 # Order class to handle transactions
 class Order:
@@ -118,17 +99,17 @@ class Order:
         self.customer = customer
         self.product = product
         self.quantity = quantity
-    
+
     # Compute the cost of the order, considering discounts and calculating rewards
     def compute_cost(self):
         original_cost = self.product.price * self.quantity  # Calculate the original cost without discount
         if isinstance(self.customer, VIPCustomer):
-            discount = self.customer.get_discount(original_cost) # Calculate discount if customer is VIP
+            discount = self.customer.get_discount(original_cost)  # Calculate discount if customer is VIP
             total_cost = original_cost - discount
         else:
             discount = 0
             total_cost = original_cost
-        reward = self.customer.get_reward(total_cost) # Calculate reward points earned from the transaction
+        reward = self.customer.get_reward(total_cost)  # Calculate reward points earned from the transaction
         return original_cost, discount, total_cost, reward
 
 
@@ -137,6 +118,8 @@ class Records:
     def __init__(self):
         self.customers = []
         self.products = []
+        self.bundles = []
+
 
     # Read customer data from a file and populate the customers list
     def read_customers(self, filename):
@@ -164,31 +147,50 @@ class Records:
             with open(filename, 'r') as file:
                 for line in file:
                     parts = line.strip().split(',')
-                    product = Product(parts[0], parts[1], float(parts[2]))
-                    self.products.append(product)
+                    if parts[0][0] == 'B':  # Bundle identifier
+                        bundle_id, bundle_name, *product_ids = parts
+                        total_price = self.compute_bundle_price(product_ids)
+                        bundle_requires_prescription = self.bundle_prescription_requirement(product_ids)
+                        self.bundles.append(Bundle(bundle_id, bundle_name, product_ids, total_price, bundle_requires_prescription))
+                    else:
+                        product_id = parts[0].strip()
+                        product_name = parts[1].strip()
+                        price = float(parts[2].strip())
+                        requires_prescription = parts[3].strip()
+                        self.products.append(Product(product_id, product_name, price, requires_prescription))
+                # print(len(self.products))
         except FileNotFoundError:
             print(f"Error: The file {filename} does not exist.")
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"An error occurred while reading product data: {e}")
 
     # Search for a customer by ID or name, returning the customer object if found
     def find_customer(self, identifier):
-        identifier = identifier.lower().strip() # Trim whitespace and convert to lowercase
+        identifier = identifier.lower().strip().lstrip()  # Trim whitespace and convert to lowercase
         for customer in self.customers:
-            if customer.name.lower().strip() == identifier:
-                print("Hello "+ customer.name)
+            if customer.name.lower().strip().lstrip() == identifier or customer.ID.lower().strip().lstrip() == identifier:
+                print("Hello " + customer.name)
                 return customer
+        return None
+
+    def find_product_by_id(self, product_id): ##TO DO: Merge this method with the other one
+        # Search in single products
+        for product in self.products:
+            if product.ID == product_id.strip().lstrip():
+                return product
         return None
 
     # Search for a product by ID or name, returning the product object if found
     def find_product(self, identifier):
-        identifier = identifier.lower().strip() # Trim whitespace and convert to lowercase
+        identifier = identifier.lower().strip().lstrip()
         for product in self.products:
-            if product.name.lower().strip() == identifier:
-                print("Your product is: "+ product.name)
+            if product.ID.lower().strip().lstrip() == identifier or product.name.lower().strip().lstrip() == identifier:
                 return product
+        for bundle in self.bundles:
+            if bundle.ID.lower().strip().lstrip() == identifier or bundle.name.lower().strip().lstrip() == identifier:
+                return bundle
         return None
-    
+
     # List all customers, showing detailed information about each
     def list_customers(self):
         for customer in self.customers:
@@ -198,16 +200,105 @@ class Records:
             else:
                 print()
 
-    # List all products, showing detailed information about each
+
+    def compute_bundle_price(self, products):
+        # Calculate the bundle price as 80% of the total price of all included products
+        total_price = 0
+        for pid in products:
+            product = self.find_product_by_id(pid)
+            if product is not None:
+                total_price += product.price
+        return "{:.2f}".format(float(0.8 * total_price))
+
+    def bundle_prescription_requirement(self, products):
+        for pid in products:
+            product = self.find_product_by_id(pid)
+            if product is not None and product.requires_prescription:
+                return True
+        return False
+
     def list_products(self):
+        print("Products:")
         for product in self.products:
-            print(f"ID: {product.ID}, Name: {product.name}, Price: {product.price} AUD")
+                print(f"ID: {product.ID}, Name: {product.name}, Price: {product.price} AUD, Prescription Requirement: {product.requires_prescription}")
+        print("Bundles:")
+        for bundle in self.bundles:
+                print( f"Bundle ID: {bundle.ID}, Name: {bundle.name}, Price: {self.compute_bundle_price(bundle.products)} AUD, Products:{bundle.products}, Prescription Required: {self.bundle_prescription_requirement(bundle.products)}")
+
+    def find_bundle(self, identifier):
+        identifier = identifier.lower().strip()
+        for bundle in self.bundles:
+            if bundle.name.lower().strip() == identifier:
+                print("Your Bundle is: " + bundle.name)
+                return bundle
+        return None
+
+class Validation:
+    def __init__(self, records):
+        self.records = records
+
+    def validate_customer_name(self):
+        while True:
+            customer_input = input("Enter your name or ID: ")
+            # Check if the input contains only alphabets for name or alphanumeric for IDs
+            if customer_input.isalpha():
+                return customer_input
+            elif customer_input.isalnum() and not customer_input.isalpha():
+                return customer_input
+            else:
+                print("Invalid input. Please use alphabets only for names or alphanumeric characters for IDs.")
+
+    def validate_product_input(self):
+        while True:
+            item_name = input("Enter the product/bundle name or ID you wish to purchase: ")
+            item = self.records.find_product(item_name)
+            if item:
+                # Check if the item is a bundle by looking for the 'products' attribute
+                if hasattr(item, 'products'):
+                    return ('bundle', item)
+                else:
+                    return ('product', item)
+            print("Product not found. Please enter a valid product name.")
+
+    def validate_quantity(self):
+        while True:
+            try:
+                quantity = int(input("Enter quantity (positive integer): "))
+                if quantity > 0:
+                    return quantity
+                else:
+                    print("Quantity must be greater than zero.")
+            except ValueError:
+                print("Invalid input. Please enter a valid integer.")
+
+    def validate_prescription(self, product):
+        if product.requires_prescription:
+            while True:
+                prescription = input("This product requires a prescription. Do you have one? (y/n): ")
+                if prescription.lower() in ['y', 'n']:
+                    if prescription.lower() == 'y':
+                        return True
+                    else:
+                        print("You cannot purchase this product without a prescription.")
+                        return False
+                else:
+                    print("Invalid response. Please enter 'y' for yes or 'n' for no.")
+        return True
+
+class Bundle:
+    def __init__(self, ID, name, products, total_price, prescription_requirement):
+        self.ID = ID
+        self.name = name
+        self.products = products  # List of products in the bundle
+        self.price = total_price
+        self.requires_prescription = prescription_requirement
 
 
 # Operations Class to handle user interactions and operational logic
 class Operations:
     def __init__(self, customer_file, product_file):
-        self.records = Records() # Instantiate the Records class to manage data
+        self.records = Records()  # Load the records handling class
+        self.validation = Validation(self.records)  # Initialize validation class
         self.load_data(customer_file, product_file)
 
     # Load customer and product data from specified files
@@ -246,51 +337,65 @@ class Operations:
 
     # Facilitate the purchasing process including updating rewards and printing receipts
     def make_purchase(self):
-        customer_name = input("Your name: ")
-        product_name = input("What would you like to buy today?: ")
-        quantity = int(input("Quantity: "))
-        # customer_name = "B1"
-        # product_name = "P1"
-        # quantity = 1
+        customer_name = self.validation.validate_customer_name()
+        item_type, item = self.validation.validate_product_input()
+        quantity = self.validation.validate_quantity()
 
         customer = self.records.find_customer(customer_name)
-        product = self.records.find_product(product_name)
+        if customer is None:
+            print("Customer not found. Please try again.")
+            return
 
-        if customer is None or product is None:
-            print("Customer or product not found. Please try again.")
+        if item.requires_prescription and not self.validation.validate_prescription(item):
+            return
+
+        if item_type == 'bundle':
+            self.handle_bundle_purchase(item, quantity, customer)
+        else:
+            self.handle_product_purchase(item, quantity, customer)
+
+    def handle_bundle_purchase(self, bundle, quantity, customer):
+        original_cost = float(bundle.price) * quantity
+        discount = self.calculate_discount(customer, original_cost)
+        total_cost = original_cost - discount
+        reward = customer.get_reward(total_cost)
+        customer.update_reward(reward)
+        self.print_receipt(customer, 'bundle', bundle, quantity, original_cost, discount, total_cost, reward)
+
+    def handle_product_purchase(self, product, quantity, customer):
+        product = self.records.find_product(product.name)
+        if product is None:
+            print("Product details cannot be found. Please try again.")
             return
 
         order = Order(customer, product, quantity)
         original_cost, discount, total_cost, reward = order.compute_cost()
-
-        # Update customer reward
         customer.update_reward(reward)
+        self.print_receipt(customer, 'product', product, quantity, original_cost, discount, total_cost, reward)
 
-        # Print the receipt based on customer type
+    def calculate_discount(self, customer, cost):
         if isinstance(customer, VIPCustomer):
-            print("---------------------------------------------------------")
-            print("Receipt")
-            print("---------------------------------------------------------")
-            print(f"Name: {customer.name}")
-            print(f"Product: {product.name}")
-            print(f"Unit Price: {product.price} (AUD)")
-            print(f"Quantity: {quantity}")
-            print("---------------------------------------------------------")
-            print(f"Original cost: {original_cost} (AUD)")
-            print(f"Discount: {discount} (AUD)")
-            print(f"Total cost: {total_cost} (AUD)")
-            print(f"Earned reward: {reward}")
+            return customer.get_discount(cost)
+        return 0
+
+    def print_receipt(self, customer, item_type, item, quantity, original_cost, discount, total_cost, reward):
+        print("---------------------------------------------------------")
+        print("Receipt")
+        print("---------------------------------------------------------")
+        print(f"Name: {customer.name}")
+        if item_type == 'bundle':
+            print(f"Bundle: {item.name}")
+            print(f"Included Products: {', '.join([pid for pid in item.products])}")
         else:
-            print("---------------------------------------------------------")
-            print("Receipt")
-            print("---------------------------------------------------------")
-            print(f"Name: {customer.name}")
-            print(f"Product: {product.name}")
-            print(f"Unit Price: {product.price} (AUD)")
+            print(f"Product: {item.name}")
+            print(f"Unit Price: {item.price} (AUD)")
             print(f"Quantity: {quantity}")
-            print("---------------------------------------------------------")
-            print(f"Total cost: {total_cost} (AUD)")
-            print(f"Earned reward: {reward}")
+        print("---------------------------------------------------------")
+        if isinstance(customer, VIPCustomer):
+            print(f"Original cost: {original_cost} AUD")
+            print(f"Discount: {discount} AUD")
+        print(f"Total cost: {total_cost} AUD")
+        print(f"Earned reward: {reward}")
 
     def run(self):
         self.display_menu()
@@ -299,6 +404,5 @@ class Operations:
 if __name__ == '__main__':
     operations = Operations('./customers.txt', './products.txt')
     operations.run()
-
 
 """Developed in PyCharm Community Edition"""
